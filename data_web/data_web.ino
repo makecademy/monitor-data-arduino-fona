@@ -15,6 +15,9 @@ DHT dht(DHTPIN, DHTTYPE);
 #define FONA_TX 3
 #define FONA_RST 4
 
+//Data
+#define refresh_rate 30
+
 // Buffer
 char replybuffer[255];
 
@@ -34,13 +37,19 @@ void setup() {
   // Initi serial
   while (!Serial);
   Serial.begin(115200);
-  Serial.println(F("FONA reading SMS"));
+  Serial.println(F("FONA initializing"));
   Serial.println(F("Initializing....(May take 3 seconds)"));
 
   fonaSerial->begin(4800);
   if (! fona.begin(*fonaSerial)) {
     Serial.println(F("Couldn't find FONA"));
-    while (1);
+     pinMode(FONA_RST, OUTPUT);
+     int attempt = 0;
+    while (! fona.begin(*fonaSerial) && attempt != 5) {   //try to reset the FONA 5 times before giving up
+      Serial.print("Resetting FONA...Attempt");      
+      Serial.println(++attempt);
+      digitalWrite(FONA_RST, LOW); //set the FONA_RST pin low (Reset the fona)
+    }
   }
   type = fona.type();
   Serial.println(F("FONA is OK"));
@@ -70,8 +79,8 @@ void setup() {
   }
 
   // Setup GPRS settings
-  fona.setGPRSNetworkSettings(F("internet"));
-  //fona.setGPRSNetworkSettings(F("your_APN"), F("your_username"), F("your_password"));
+  //fona.setGPRSNetworkSettings(F("internet"));
+  fona.setGPRSNetworkSettings(F("your_APN"), F("your_username"), F("your_password"));
 
   // Init DHT
   dht.begin();
@@ -83,12 +92,12 @@ void setup() {
   if (!fona.enableGPRS(false))
     Serial.println(F("Failed to turn off"));
 
-  delay(1000);
+  delay(10000);
  
   if (!fona.enableGPRS(true))
     Serial.println(F("Failed to turn on"));
 
-  delay(1000);
+  delay(10000);
 
 }
 void loop() {
@@ -139,7 +148,7 @@ void loop() {
   fona.HTTP_GET_end();
 
   // Wait
-  delay(60 * 1000);
+  delay(refresh_rate * 1000);
   
 }
 
